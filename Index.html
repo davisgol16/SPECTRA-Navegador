@@ -1,0 +1,721 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPECTRA | Audio Lab</title>
+
+<style>
+:root {
+  --bg: #07111d;
+  --panel: #101f30;
+  --cyan: #21d9ff;
+  --blue: #167bff;
+  --text: #eaf8ff;
+  --muted: #8299aa;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, sans-serif;
+}
+
+header {
+  padding: 20px;
+  border-bottom: 1px solid #19354b;
+  background: #0a1725;
+}
+
+.logo {
+  font-size: 27px;
+  font-weight: 900;
+  letter-spacing: 5px;
+  color: var(--cyan);
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 3px;
+  margin-top: 5px;
+}
+
+nav {
+  display: flex;
+  overflow-x: auto;
+  gap: 8px;
+  padding: 12px;
+  background: #0b1928;
+}
+
+nav button {
+  flex: 1;
+  min-width: 100px;
+  padding: 12px 8px;
+  border: 1px solid #24445c;
+  border-radius: 9px;
+  background: #102337;
+  color: white;
+  font-weight: bold;
+}
+
+nav button.active {
+  background: #123e56;
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+main {
+  max-width: 950px;
+  margin: auto;
+  padding: 18px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid #1c3b53;
+  padding: 18px;
+  border-radius: 15px;
+  margin-bottom: 16px;
+}
+
+h2 { margin-top: 0; }
+
+.description {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+button, .upload {
+  cursor: pointer;
+}
+
+.action {
+  padding: 12px 17px;
+  border: 0;
+  border-radius: 9px;
+  background: linear-gradient(120deg, #087cdb, #13bce8);
+  color: white;
+  font-weight: bold;
+  margin: 5px 3px 5px 0;
+}
+
+.secondary {
+  background: #1b3349;
+  border: 1px solid #31536b;
+}
+
+input[type=file] {
+  display: none;
+}
+
+.upload {
+  display: inline-block;
+  padding: 13px;
+  background: #123c55;
+  border: 1px dashed var(--cyan);
+  border-radius: 9px;
+  color: var(--cyan);
+  margin: 8px 0;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  background: #030a12;
+  border: 1px solid #23445d;
+  border-radius: 9px;
+  touch-action: none;
+}
+
+#drawCanvas { height: 300px; }
+#specCanvas { height: 300px; }
+#waveCanvas { height: 190px; }
+
+.tab { display: none; }
+.tab.active { display: block; }
+
+.status {
+  font-size: 12px;
+  color: var(--cyan);
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+footer {
+  text-align: center;
+  color: #60798b;
+  padding: 25px;
+  font-size: 11px;
+}
+
+@media(max-width:500px) {
+  main { padding: 12px; }
+  .panel { padding: 13px; }
+  nav button { min-width: 95px; }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">SPECTRA</div>
+  <div class="subtitle">AUDIO VISUALIZATION & CREATION</div>
+</header>
+
+<nav>
+  <button class="active" data-tab="spectrogram">Espectrograma</button>
+  <button data-tab="drawing">Desenhar</button>
+  <button data-tab="waves">Ondas</button>
+</nav>
+
+<main>
+
+<section id="spectrogram" class="tab active">
+  <div class="panel">
+    <h2>Espectrograma</h2>
+    <p class="description">
+      Importe um arquivo MP3 ou WAV e visualize suas frequências.
+    </p>
+
+    <label class="upload" for="audioFile">
+      + Importar áudio
+    </label>
+    <input id="audioFile" type="file" accept="audio/*">
+
+    <div class="status" id="audioStatus">Nenhum áudio carregado.</div>
+
+    <div class="controls">
+      <button class="action" id="generateSpec">Gerar espectrograma</button>
+      <button class="action secondary" id="playAudio">▶ Reproduzir</button>
+      <button class="action secondary" id="stopAudio">■ Parar</button>
+      <button class="action secondary" id="saveSpec">Baixar imagem</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Visualização de frequências</h2>
+    <canvas id="specCanvas" width="1000" height="500"></canvas>
+    <p class="description">
+      Eixo horizontal: tempo. Eixo vertical: frequência.
+      As cores representam a intensidade do som.
+    </p>
+  </div>
+</section>
+
+<section id="drawing" class="tab">
+  <div class="panel">
+    <h2>Sound Drawing</h2>
+    <p class="description">
+      Desenhe com o dedo ou mouse. A altura do traço representa
+      a frequência do som ao longo do tempo.
+    </p>
+
+    <canvas id="drawCanvas" width="1000" height="500"></canvas>
+
+    <div class="controls">
+      <button class="action" id="clearDrawing">Limpar</button>
+      <button class="action" id="createSound">♫ Criar áudio</button>
+      <button class="action secondary" id="playDrawing">▶ Reproduzir</button>
+      <button class="action secondary" id="exportDrawing">Baixar WAV</button>
+    </div>
+
+    <div class="status" id="drawStatus">Desenhe na área acima.</div>
+  </div>
+</section>
+
+<section id="waves" class="tab">
+  <div class="panel">
+    <h2>Wave Visualizer</h2>
+    <p class="description">
+      Visualização da forma de onda do áudio importado.
+    </p>
+
+    <canvas id="waveCanvas" width="1000" height="300"></canvas>
+
+    <div class="controls">
+      <button class="action" id="drawWave">Gerar ondas</button>
+      <button class="action secondary" id="saveWave">Baixar imagem</button>
+    </div>
+    <div class="status" id="waveStatus">
+      Importe um áudio na aba Espectrograma.
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+SPECTRA WEB · AUDIO LAB
+</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+
+let audioContext;
+let audioBuffer = null;
+let currentSource = null;
+let drawingPoints = [];
+let generatedBuffer = null;
+let drawingActive = false;
+
+function getAudioContext() {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioContext.state === "suspended") audioContext.resume();
+  return audioContext;
+}
+
+// NAVEGAÇÃO
+
+document.querySelectorAll("nav button").forEach(button => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+
+    button.classList.add("active");
+    $(button.dataset.tab).classList.add("active");
+  });
+});
+
+// IMPORTAR ÁUDIO
+
+$("audioFile").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  $("audioStatus").textContent = "Carregando áudio...";
+
+  try {
+    const ctx = getAudioContext();
+    const data = await file.arrayBuffer();
+    audioBuffer = await ctx.decodeAudioData(data);
+
+    $("audioStatus").textContent =
+      file.name + " | " +
+      audioBuffer.duration.toFixed(2) + " segundos | " +
+      audioBuffer.sampleRate + " Hz";
+
+    drawWaveform();
+    $("waveStatus").textContent = "Áudio carregado com sucesso.";
+  } catch (err) {
+    $("audioStatus").textContent = "Não foi possível abrir esse arquivo.";
+  }
+});
+
+function stopAudio() {
+  if (currentSource) {
+    try { currentSource.stop(); } catch(e) {}
+    currentSource = null;
+  }
+}
+
+function playBuffer(buffer) {
+  const ctx = getAudioContext();
+  stopAudio();
+
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(ctx.destination);
+  source.start();
+
+  currentSource = source;
+  source.onended = () => {
+    if (currentSource === source) currentSource = null;
+  };
+}
+
+$("playAudio").onclick = () => {
+  if (!audioBuffer) {
+    $("audioStatus").textContent = "Importe um áudio primeiro.";
+    return;
+  }
+  playBuffer(audioBuffer);
+};
+
+$("stopAudio").onclick = stopAudio;
+
+// ESPECTROGRAMA
+
+function fft(real, imag) {
+  const n = real.length;
+
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+
+    if (i < j) {
+      [real[i], real[j]] = [real[j], real[i]];
+      [imag[i], imag[j]] = [imag[j], imag[i]];
+    }
+  }
+
+  for (let len = 2; len <= n; len <<= 1) {
+    const angle = -2 * Math.PI / len;
+    const wr0 = Math.cos(angle);
+    const wi0 = Math.sin(angle);
+
+    for (let i = 0; i < n; i += len) {
+      let wr = 1, wi = 0;
+      for (let j = 0; j < len / 2; j++) {
+        const u = i + j;
+        const v = u + len / 2;
+
+        const tr = real[v] * wr - imag[v] * wi;
+        const ti = real[v] * wi + imag[v] * wr;
+
+        real[v] = real[u] - tr;
+        imag[v] = imag[u] - ti;
+        real[u] += tr;
+        imag[u] += ti;
+
+        const nextWr = wr * wr0 - wi * wi0;
+        wi = wr * wi0 + wi * wr0;
+        wr = nextWr;
+      }
+    }
+  }
+}
+
+function makeColor(value) {
+  const stops = [
+    [0, 0, 0],
+    [0, 15, 90],
+    [0, 120, 255],
+    [0, 240, 230],
+    [255, 230, 50],
+    [255, 60, 30],
+    [255, 255, 255]
+  ];
+
+  const x = Math.max(0, Math.min(0.9999, value)) * (stops.length - 1);
+  const i = Math.floor(x);
+  const f = x - i;
+
+  return stops[i].map((v, k) =>
+    Math.round(v * (1-f) + stops[i+1][k] * f)
+  );
+}
+
+$("generateSpec").onclick = () => {
+  if (!audioBuffer) {
+    $("audioStatus").textContent = "Importe um áudio primeiro.";
+    return;
+  }
+
+  const canvas = $("specCanvas");
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width;
+  const H = canvas.height;
+
+  const N = 1024;
+  const hop = 256;
+  const channel = audioBuffer.getChannelData(0);
+  const frames = Math.ceil(Math.max(0, channel.length - N) / hop) + 1;
+
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, W, H);
+
+  const real = new Float32Array(N);
+  const imag = new Float32Array(N);
+
+  const image = ctx.createImageData(W, H);
+
+  for (let x = 0; x < W; x++) {
+    const frame = Math.min(frames - 1, Math.floor(x / W * frames));
+    const start = frame * hop;
+
+    real.fill(0);
+    imag.fill(0);
+
+    for (let i = 0; i < N; i++) {
+      const sample = channel[start + i] || 0;
+      const window = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (N-1));
+      real[i] = sample * window;
+    }
+
+    fft(real, imag);
+
+    for (let y = 0; y < H; y++) {
+      const bin = Math.floor((1 - y / H) * (N / 2 - 1));
+      const magnitude = Math.sqrt(real[bin] ** 2 + imag[bin] ** 2);
+      const db = 20 * Math.log10(magnitude + 0.00001);
+      const value = Math.max(0, Math.min(1, (db + 65) / 65));
+      const rgb = makeColor(value);
+
+      const index = (y * W + x) * 4;
+      image.data[index] = rgb[0];
+      image.data[index+1] = rgb[1];
+      image.data[index+2] = rgb[2];
+      image.data[index+3] = 255;
+    }
+  }
+
+  ctx.putImageData(image, 0, 0);
+  $("audioStatus").textContent = "Espectrograma gerado!";
+};
+
+function saveCanvas(canvas, filename) {
+  canvas.toBlob(blob => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, "image/png");
+}
+
+$("saveSpec").onclick = () => saveCanvas($("specCanvas"), "spectra-espectrograma.png");
+
+// DESENHO
+
+const drawCanvas = $("drawCanvas");
+const drawCtx = drawCanvas.getContext("2d");
+
+function clearDraw() {
+  drawingPoints = [];
+  drawCtx.fillStyle = "#030a12";
+  drawCtx.fillRect(0, 0, 1000, 500);
+}
+
+clearDraw();
+
+function getPoint(e) {
+  const rect = drawCanvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left) / rect.width * 1000,
+    y: (e.clientY - rect.top) / rect.height * 500
+  };
+}
+
+drawCanvas.addEventListener("pointerdown", e => {
+  e.preventDefault();
+  drawCanvas.setPointerCapture(e.pointerId);
+  drawingActive = true;
+
+  const p = getPoint(e);
+  drawingPoints.push(p);
+
+  drawCtx.beginPath();
+  drawCtx.moveTo(p.x, p.y);
+  drawCtx.strokeStyle = "#25d9ff";
+  drawCtx.lineWidth = 5;
+  drawCtx.lineCap = "round";
+  drawCtx.lineJoin = "round";
+});
+
+drawCanvas.addEventListener("pointermove", e => {
+  if (!drawingActive) return;
+  e.preventDefault();
+
+  const p = getPoint(e);
+  drawingPoints.push(p);
+
+  drawCtx.lineTo(p.x, p.y);
+  drawCtx.stroke();
+});
+
+function endDrawing() {
+  drawingActive = false;
+}
+
+drawCanvas.addEventListener("pointerup", endDrawing);
+drawCanvas.addEventListener("pointercancel", endDrawing);
+
+$("clearDrawing").onclick = () => {
+  clearDraw();
+  generatedBuffer = null;
+  $("drawStatus").textContent = "Tela limpa.";
+};
+
+// TRANSFORMAR DESENHO EM ÁUDIO
+
+$("createSound").onclick = () => {
+  if (drawingPoints.length < 2) {
+    $("drawStatus").textContent = "Faça um desenho primeiro.";
+    return;
+  }
+
+  const ctx = getAudioContext();
+  const duration = 5;
+  const rate = 44100;
+  const length = duration * rate;
+
+  const buffer = ctx.createBuffer(1, length, rate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < length; i++) {
+    const x = i / length * 1000;
+
+    let nearest = drawingPoints[0];
+
+    for (let j = 1; j < drawingPoints.length; j++) {
+      if (drawingPoints[j].x >= x) {
+        const previous = drawingPoints[j-1];
+        const next = drawingPoints[j];
+        const span = Math.max(0.001, next.x - previous.x);
+        const t = Math.max(0, Math.min(1, (x - previous.x) / span));
+
+        nearest = {
+          x,
+          y: previous.y + (next.y - previous.y) * t
+        };
+        break;
+      }
+      nearest = drawingPoints[j];
+    }
+
+    const frequency = 80 * Math.pow(15, 1 - nearest.y / 500);
+    const amplitude = 0.22;
+    const time = i / rate;
+
+    data[i] = amplitude * Math.sin(2 * Math.PI * frequency * time);
+  }
+
+  // Fade para evitar cliques no começo e no fim
+  const fade = Math.floor(rate * 0.03);
+
+  for (let i = 0; i < fade; i++) {
+    data[i] *= i / fade;
+    data[length - 1 - i] *= i / fade;
+  }
+
+  generatedBuffer = buffer;
+  $("drawStatus").textContent = "Áudio criado! Duração: 5 segundos.";
+};
+
+$("playDrawing").onclick = () => {
+  if (!generatedBuffer) {
+    $("drawStatus").textContent = "Crie o áudio primeiro.";
+    return;
+  }
+  playBuffer(generatedBuffer);
+};
+
+// EXPORTAR WAV
+
+function exportWav(buffer) {
+  const samples = buffer.getChannelData(0);
+  const rate = buffer.sampleRate;
+  const wav = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(wav);
+
+  function writeString(offset, string) {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  }
+
+  writeString(0, "RIFF");
+  view.setUint32(4, 36 + samples.length * 2, true);
+  writeString(8, "WAVE");
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, rate, true);
+  view.setUint32(28, rate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, "data");
+  view.setUint32(40, samples.length * 2, true);
+
+  for (let i = 0; i < samples.length; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(44 + i * 2, s < 0 ? s * 32768 : s * 32767, true);
+  }
+
+  const blob = new Blob([wav], {type: "audio/wav"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "spectra-audio.wav";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+$("exportDrawing").onclick = () => {
+  if (!generatedBuffer) {
+    $("drawStatus").textContent = "Crie o áudio primeiro.";
+    return;
+  }
+  exportWav(generatedBuffer);
+};
+
+// ONDAS
+
+function drawWaveform() {
+  if (!audioBuffer) return;
+
+  const canvas = $("waveCanvas");
+  const ctx = canvas.getContext("2d");
+  const data = audioBuffer.getChannelData(0);
+
+  const W = canvas.width;
+  const H = canvas.height;
+
+  ctx.fillStyle = "#030a12";
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = "#16445b";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, H/2);
+  ctx.lineTo(W, H/2);
+  ctx.stroke();
+
+  ctx.strokeStyle = "#22d9ff";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+
+  const step = Math.ceil(data.length / W);
+
+  for (let x = 0; x < W; x++) {
+    let min = 1, max = -1;
+
+    for (let j = 0; j < step; j++) {
+      const value = data[x * step + j] || 0;
+      min = Math.min(min, value);
+      max = Math.max(max, value);
+    }
+
+    ctx.moveTo(x, H/2 - max * H/2);
+    ctx.lineTo(x, H/2 - min * H/2);
+  }
+
+  ctx.stroke();
+}
+
+$("drawWave").onclick = () => {
+  if (!audioBuffer) {
+    $("waveStatus").textContent = "Importe um áudio primeiro.";
+    return;
+  }
+
+  drawWaveform();
+  $("waveStatus").textContent = "Forma de onda gerada!";
+};
+
+$("saveWave").onclick = () => saveCanvas($("waveCanvas"), "spectra-ondas.png");
+
+</script>
+</body>
+</html>
